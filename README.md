@@ -22,6 +22,11 @@ With this script, we propose to use a new flash layout
 - Rootfs1 is larger but use the same start offset (simplify the transition since no write in flash is required)
 - Kernel is larger. We must be careful during the transition since offsets are differents.
 
+With this new layout, we can transparently upgrade to Bullseye
+
+- More room for kernel and initrd
+- Future kernel updates performed during `apt upgrade`will use the new layout without any further change or manual operations.
+
 ## Kernel and MTD partitions
 
 Linux has 2 methods for configuring the partitions.
@@ -146,6 +151,37 @@ sudo ./qnap_mtd_resize.py
 ```
 
 And reboot...
+
+You are now running the same system, but with more room:
+
+```
+$ cat /proc/mtd 
+dev:    size   erasesize  name
+mtd0: 00080000 00040000 "uboot"
+mtd1: 00300000 00040000 "Kernel"
+mtd2: 00c00000 00040000 "RootFS1"
+mtd3: 00200000 00040000 "Kernel_legacy"
+mtd4: 00040000 00040000 "U-Boot Config"
+mtd5: 00040000 00040000 "NAS Config"
+```
+
+Which makes possible to install Bullseye's kernel:
+
+```
+$ flash-kernel 
+kirkwood-qnap: machine: QNAP TS219 family
+Using DTB: kirkwood-ts219-6281.dtb
+Installing /usr/lib/linux-image-5.10.0-8-marvell/kirkwood-ts219-6281.dtb into /boot/dtbs/5.10.0-8-marvell/./kirkwood-ts219-6281.dtb
+Taking backup of kirkwood-ts219-6281.dtb.
+Installing new kirkwood-ts219-6281.dtb.
+flash-kernel: installing version 5.10.0-8-marvell
+flash-kernel: appending /usr/lib/linux-image-5.10.0-8-marvell/kirkwood-ts219-6281.dtb to kernel
+Generating kernel u-boot image... done.
+Flashing kernel (using 2455558/3145728 bytes)... done.
+Flashing initramfs (using 3992060/12582912 bytes)... done.
+```
+
+
 
 ## Additional configuration to improve`initrd` size
 
