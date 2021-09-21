@@ -120,14 +120,14 @@ except FileNotFoundError:
     print("'flash-kernel' package is not installed. Are you really running this script from a QNAP ?")
     exit(1)
 except subprocess.CalledProcessError:
-    print("You are not running this script on a supported QNAP device.")
+    print("You are not running this script from a supported QNAP device.")
     exit(1)
     
 # check if dtb_file is none
 print("DTB file:", dtb_file)
 
 if dtb_file not in TESTED_QNAP_DTB:
-    print("Partition resize was not tested on this device yet. Do you wan't to continue ? (y/N)")
+    print("Partition resize was not tested on this device yet. Do you want to continue ? (y/N)")
     resp = sys.stdin.readline()
     if resp.strip().upper() != 'Y':
         print("Abort.")
