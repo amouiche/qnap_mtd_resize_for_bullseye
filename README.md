@@ -137,6 +137,8 @@ A first run with `--dry-run`option to check that everything will be fine (except
 sudo ./qnap_mtd_resize.py --dry-run
 ```
 
+Example of dry-run log [here.](resources/QNAP_TS419_family_dryrun_log.txt)
+
 If everything is fine run again without `--dry-run`
 
 ```
