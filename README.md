@@ -195,9 +195,9 @@ echo "COMPRESS=xz" > /etc/initramfs-tools/conf.d/compress
 
 # List of tested devices:
 
-| Model             | DTB file                |
-| ----------------- | ----------------------- |
-| QNAP TS219 family | kirkwood-ts219-6281.dtb |
-|                   |                         |
-|                   |                         |
+| Model             | DTB file                | uboot env<br>(legacy)                                        | uboot_env<br>(new)                                           | log                                        |
+| ----------------- | ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------ |
+| QNAP TS219 family | kirkwood-ts219-6281.dtb |                                                              |                                                              |                                            |
+| QNAP TS419 family | kirkwood-ts419-6282.dtb | [QNAP_TS419_family,uboot-env.legacy](resources/QNAP_TS419_family,uboot-env.legacy) | [QNAP_TS419_family,uboot-env.new](resources/QNAP_TS419_family,uboot-env.new) | [log](resources/QNAP_TS419_family_log.txt) |
+|                   |                         |                                                              |                                                              |                                            |
 
