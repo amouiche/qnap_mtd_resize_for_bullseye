@@ -95,9 +95,13 @@ def mtd_lookup(name):
     
 
 def str_replace(search, replace, text):
+    """
+        Search for 'search' pattern in 'text' and replace by 'replace'
+        Raise a KeyError if 'search' is not found.
+    """
     result = re.sub(search, replace, text)
     if result == text:
-        KeyError(f"'{search}' not found in '{text}'")
+        raise KeyError(f"'{search}' not found in '{text}'")
     return result
         
         
@@ -242,6 +246,8 @@ try:
                               "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
 except KeyError as e:
     print(str(e))
+    print("Don't know how to patch 'bootcmd' for this model. Please report this log.")
+    exit(1)
     
 print("   Old:", bootcmd)
 print("   New:", bootcmd_new)
@@ -263,6 +269,8 @@ try:
 
 except KeyError as e:
     print(str(e))
+    print("Don't know how to patch 'bootargs' for this model. Please report this log.")
+    exit(1)
     
 print("   Old:", bootargs)
 print("   New:", bootargs_new)
