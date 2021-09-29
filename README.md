@@ -1,6 +1,6 @@
 # QNAP partitions resize for kirkwood devices.
 
-As [explained by Marin Michlmay](https://www.cyrius.com/debian/kirkwood/qnap/ts-219/upgrade/), Debian bullseye support on kirkwood QNAP devices was dropped due to [mainly] the limited size of the Kernel partition (2MB). 
+As [explained by Marin Michlmayr](https://www.cyrius.com/debian/kirkwood/qnap/ts-219/upgrade/), Debian bullseye support on kirkwood QNAP devices was dropped due to [mainly] the limited size of the Kernel partition (2MB).
 
 Indeed, Bullseye current kernel image (vmlinuz-5.10.0-8-marvell) is 2445216 bytes long (2.3MB)
 
@@ -20,7 +20,7 @@ With this script, we propose to use a new flash layout
 - We keep /dev/mtdX numbers mapping, in case some other users are using a fix numbering.
 - we keep a window on legacy kernel mapping to help if we want to restore the original QNAP firmware or to install the Buster installer
 - Rootfs1 is larger but use the same start offset (simplify the transition since no write in flash is required)
-- Kernel is larger. We must be careful during the transition since offsets are differents.
+- Kernel is larger. We must be careful during the transition since offsets are different.
 
 With this new layout, we can transparently upgrade to Bullseye
 
@@ -95,13 +95,13 @@ Linux has 2 methods for configuring the partitions.
 
    U-boot can also override the DTB information by using `mtdparts=....`options as parsed by https://github.com/torvalds/linux/blob/master/drivers/mtd/parsers/cmdlinepart.c
 
-   The kernel try use use cmdline parameters before DTB informations.
+   The kernel try use use cmdline parameters before DTB information.
 
    Original QNAP U-boot configuration doesn't use this method.
 
 
 
-**I select the "kernel boot cmdlne" solution to configure the new layout:**
+**I select the "kernel boot cmdline" solution to configure the new layout:**
 
 - if `/etc/flash-kernel/dtbs/`content is modified or erased for some reasons (new install ?) the u-boot setup and the kernel MTD usage will not be synchronized and the device will fail to boot.
 - cmdline only "patch/override" the MTD partitions information. If the original DTB file provided by Debian is updated for some reasons (driver fixes), the kernel will still continue to use those fixes.
@@ -110,7 +110,7 @@ The `qnap_mtd_resize.py` script will:
 
 - Resize the "NAS config" filesystem
 - Prepare the content of current "NAS config" partition (offset 0xc0000 to 0x200000) with the shrink FS + first 1MB of the current kernel
-- preapre the image of current "Kernel" partition (starting at 0x200000) with tail of the current kernel
+- prepare the image of current "Kernel" partition (starting at 0x200000) with tail of the current kernel
 - Patch U-boot env/config for the new `bootargs`and `bootcmd`variables.
 - Write flash from 0xc0000 to 0x200000 ("NAS config" + 1MB head of kernel)
 - write flash from 0x200000 with 1MB tail of kernel.
