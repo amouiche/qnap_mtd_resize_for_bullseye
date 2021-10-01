@@ -240,7 +240,7 @@ NEW_MTDPARTS=f"{mtd_master}:512k@0(uboot)ro,3M@0x100000(Kernel),12M@0x400000(Roo
 ###################################################################
 print("\n[Prepare new 'bootcmd']")
 try:
-    bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x80000", 
+    bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
                               "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
     bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000", 
                               "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
