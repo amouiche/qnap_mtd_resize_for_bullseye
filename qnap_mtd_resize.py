@@ -313,8 +313,8 @@ cmd = f"""
     /usr/sbin/losetup {args.loop} /tmp/mtd_nas_config.dump
     
     # run e2fsck twice. the First may return an error status even if FS is corrected
-    /usr/sbin/e2fsck -p -v {args.loop} || true
-    if ! /usr/sbin/e2fsck -p -v {args.loop}; then
+    /usr/sbin/e2fsck -f -p -v {args.loop} || true
+    if ! /usr/sbin/e2fsck -f -p -v {args.loop}; then
         echo "e2fsck failed. 'NAS config' resize not possible automatically"
         /usr/sbin/losetup -d {args.loop}
         exit 1
