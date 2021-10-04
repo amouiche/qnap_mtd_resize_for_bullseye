@@ -112,7 +112,6 @@ parser = argparse.ArgumentParser(
         description='Tool to resize QNAP mtd partitions in order to increase the kernel and rootfs size'
         )
 
-parser.add_argument("--loop", metavar="DEV", default="/dev/loop0", help="/dev/loopX device to use for 'NAS config' FS resize (default: /dev/loop0)")
 parser.add_argument("--dry-run", action="store_true")
 args = parser.parse_args()
 
@@ -311,22 +310,22 @@ cmd = f"""
     set -x
     /usr/sbin/modprobe loop
     
-    /usr/sbin/losetup {args.loop} /tmp/mtd_nas_config.dump
+    loopdev=$(/usr/sbin/losetup --show -f /tmp/mtd_nas_config.dump)
     
     # run e2fsck twice. the First may return an error status even if FS is corrected
-    /usr/sbin/e2fsck -f -p -v {args.loop} || true
-    if ! /usr/sbin/e2fsck -f -p -v {args.loop}; then
+    /usr/sbin/e2fsck -f -p -v $loopdev || true
+    if ! /usr/sbin/e2fsck -f -p -v $loopdev; then
         echo "e2fsck failed. 'NAS config' resize not possible automatically"
-        /usr/sbin/losetup -d {args.loop}
+        /usr/sbin/losetup -d $loopdev
         exit 1
     fi
     
-    if ! /usr/sbin/resize2fs {args.loop} 128; then
+    if ! /usr/sbin/resize2fs $loopdev 128; then
         echo "resize2fs failed. 'NAS config' resize not possible automatically"
-        /usr/sbin/losetup -d {args.loop}
+        /usr/sbin/losetup -d $loopdev
         exit 1
     fi
-    /usr/sbin/losetup -d {args.loop}
+    /usr/sbin/losetup -d $loopdev
     """
     
 subprocess.check_call(cmd, shell=True)
