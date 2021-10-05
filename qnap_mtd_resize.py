@@ -184,13 +184,16 @@ if size != 0x00140000:
 mtd_uboot_config, _, _ = mtd_lookup("U-Boot Config")
 
 
+
+# add /sbin and /usr/sbin in the PATH to be sure tools like flashcp can be found
+os.environ["PATH"] += ":/sbin:/usr/sbin"
     
 # early check of required tools to see if we have all of them
 for tool_cmd in [
-        "/sbin/flashcp -V", 
-        "/sbin/flash_erase --version", 
-        "/usr/bin/fw_setenv -v", 
-        "/usr/bin/fw_printenv -v",
+        "flashcp -V", 
+        "flash_erase --version", 
+        "fw_setenv -v", 
+        "fw_printenv -v",
         ]:
     print("Checking:", tool_cmd)
     try:
@@ -210,7 +213,7 @@ if os.getuid() != 0:
 ###################################################################
 print("\n[find on which MTD device partitions are currently mounted]")  
 mtd_master = None
-for line in subprocess.check_output(["/usr/bin/dmesg"]).split(b"\n"):
+for line in subprocess.check_output(["dmesg"]).split(b"\n"):
     line = line.decode(errors="ignore")
     m = re.search(r'Creating [0-9]+ MTD partitions on "([^"]+)"', line)
     if m:
@@ -233,7 +236,7 @@ with open("/tmp/fw_env.config", "w") as F:
 """)
 
 uboot_env = {}
-for line in subprocess.check_output(["/usr/bin/fw_printenv", "-c", "/tmp/fw_env.config"]).decode().split("\n"):
+for line in subprocess.check_output(["fw_printenv", "-c", "/tmp/fw_env.config"]).decode().split("\n"):
     line = line.strip()
     m = re.match(r"([a-zA-Z_0-9]+)=(.*)", line)
     if m:
@@ -353,24 +356,24 @@ print("[Resize 'NAS config' dump from 1280KB to 256KB.]")
 cmd = f"""
     set -e
     set -x
-    /usr/sbin/modprobe loop
+    modprobe loop
     
-    loopdev=$(/usr/sbin/losetup --show -f /tmp/mtd_nas_config.dump)
+    loopdev=$(losetup --show -f /tmp/mtd_nas_config.dump)
     
     # run e2fsck twice. the First may return an error status even if FS is corrected
-    /usr/sbin/e2fsck -f -p -v $loopdev || true
-    if ! /usr/sbin/e2fsck -f -p -v $loopdev; then
+    e2fsck -f -p -v $loopdev || true
+    if ! e2fsck -f -p -v $loopdev; then
         echo "e2fsck failed. 'NAS config' resize not possible automatically"
-        /usr/sbin/losetup -d $loopdev
+        losetup -d $loopdev
         exit 1
     fi
     
-    if ! /usr/sbin/resize2fs $loopdev 128; then
+    if ! resize2fs $loopdev 128; then
         echo "resize2fs failed. 'NAS config' resize not possible automatically"
-        /usr/sbin/losetup -d $loopdev
+        losetup -d $loopdev
         exit 1
     fi
-    /usr/sbin/losetup -d $loopdev
+    losetup -d $loopdev
     """
     
 subprocess.check_call(cmd, shell=True)
@@ -408,7 +411,7 @@ print("""    !!!! Warning !!!!
         cat /dev/mtd3 > /tmp/mtd3.rootfs2.backup
         cat /dev/mtd4 > /tmp/mtd4.uboot-config.backup
         cat /dev/mtd5 > /tmp/mtd5.nas-config.backup
-        /usr/bin/fw_printenv -c /tmp/fw_env.config  > /tmp/uboot_config.backup.txt
+        fw_printenv -c /tmp/fw_env.config  > /tmp/uboot_config.backup.txt
         cd /tmp
         tar cvzf mtd_backup.tgz mtd?.*.backup uboot_config.backup.txt
         
@@ -432,7 +435,7 @@ if resp.strip().upper() != 'Y':
 
 ###################################################################
 print("\n[Flash 'NAS config' partition content (ie 'NAS config' + head of Kernel) (still a 'safe' op)]")
-cmd = f"""/sbin/flashcp -v /tmp/mtd_nas_config.new /dev/{mtd_nas_config}"""
+cmd = f"""flashcp -v /tmp/mtd_nas_config.new /dev/{mtd_nas_config}"""
 if not args.dry_run:
     print("+", cmd)
     subprocess.check_call(cmd, shell=True)
@@ -444,7 +447,7 @@ else:
     
 ###################################################################
 print("\n[Change U-boot config with new values)]")
-cmd = f"""/usr/bin/fw_setenv -c /tmp/fw_env.config -s /tmp/fw_setenv.script"""
+cmd = f"""fw_setenv -c /tmp/fw_env.config -s /tmp/fw_setenv.script"""
 if not args.dry_run:
     print("+", cmd)
     subprocess.check_call(cmd, shell=True)
@@ -456,7 +459,7 @@ else:
 
 ###################################################################
 print("\n[Flash tail of the kernel in old 'Kernel' Partition]")
-cmd = f"""/sbin/flashcp -v /tmp/mtd_kernel.tail /dev/{mtd_kernel}"""
+cmd = f"""flashcp -v /tmp/mtd_kernel.tail /dev/{mtd_kernel}"""
 if not args.dry_run:
     print("+", cmd)
     subprocess.check_call(cmd, shell=True)
