@@ -112,9 +112,30 @@ parser = argparse.ArgumentParser(
         description='Tool to resize QNAP mtd partitions in order to increase the kernel and rootfs size'
         )
 
-parser.add_argument("--dry-run", action="store_true")
+parser.add_argument("--dry-run", action="store_true", help="Don't modify the flash content")
+parser.add_argument("--skip-bootargs", action="store_true", help="[WARNING] Don't patch bootargs. --setenv-script also required")
+parser.add_argument("--skip-bootcmd", action="store_true", help="[WARNING] Don't patch bootcmd. --setenv-script also required")
+parser.add_argument("--setenv-script-append", metavar="FILE", help="""
+    Additional setenv script to append in addition to the bootargs and bootcmd patching.
+    (see man fw_setenv)")
+    """)
+
 args = parser.parse_args()
 
+
+if (args.skip_bootargs or args.skip_bootcmd) and (not args.setenv_script_append):
+    print("--skip-bootargs and --skip-bootcmd require to also use --setenv-script-append option to provide the proper final settings for bootargs and bootcmd")
+    print("Use and empty file if you definitely don't want to modify bootargs or bootcmd")
+    exit(1)
+
+
+
+if args.setenv_script_append:
+    try:
+        setenv_script_append_content = open(args.setenv_script_append).read()
+    except:
+        print(f"Failed to read {args.setenv_script_append}")
+        exit(1)
 
 
 ###################################################################
@@ -238,42 +259,53 @@ NEW_MTDPARTS=f"{mtd_master}:512k@0(uboot)ro,3M@0x100000(Kernel),12M@0x400000(Roo
    
    
 ###################################################################
-print("\n[Prepare new 'bootcmd']")
-try:
-    bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
-                              "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
-    bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000", 
-                              "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
-except KeyError as e:
-    print(str(e))
-    print("Don't know how to patch 'bootcmd' for this model. Please report this log.")
-    exit(1)
-    
-print("   Old:", bootcmd)
-print("   New:", bootcmd_new)
+if args.skip_bootcmd:
+    print("\n[Skipping 'bootcmd patching']")
+    print("You should manual modify the uboot env variable to let uboot load:")
+    print("  - load the 3MB kernel image from flash (bus address 0xf8100000) to memory at address 0x800000")
+    print("  - load the 12MB initrf image from flash (bus address 0xf8400000) to memory at address 0xb00000")
+else:
+    print("\n[Prepare new 'bootcmd']")
+    try:
+        bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
+                                  "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
+        bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000", 
+                                  "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
+    except KeyError as e:
+        print(str(e))
+        print("Don't know how to patch 'bootcmd' for this model. Please report this log.")
+        exit(1)
+        
+    print("   Old:", bootcmd)
+    print("   New:", bootcmd_new)
 
 
 ###################################################################
-print("\n[Prepare new 'bootargs']")
-try:
-    bootargs_new = str_replace("initrd=0xa00000,0x900000", 
-                              "initrd=0xb00000,0xc00000", bootargs)
-                              
-    # setup cmdlinepart.mtdparts=... to set the partitions for cases where 'cmdlinepart' is build as external module 
-    # (which is the current Debian behavior)
-    bootargs_new = bootargs_new + f' cmdlinepart.mtdparts="{NEW_MTDPARTS}"'
-    
-    # also add mtdparts=... if for some reasons in future, Debian will switch to internal module or if users are
-    # building their own kernel with such configuration
-    bootargs_new = bootargs_new + f' mtdparts="{NEW_MTDPARTS}"'
+if args.skip_bootargs:
+    print("\n[Skipping 'bootargs patching']")
+    print("You should manual modify the uboot env variable to add the following lines to your kernel cmdline/bootagrgs:")
+    print(f' cmdlinepart.mtdparts="{NEW_MTDPARTS}" mtdparts="{NEW_MTDPARTS}"')
+else:
+    print("\n[Prepare new 'bootargs']")
+    try:
+        bootargs_new = str_replace("initrd=0xa00000,0x900000", 
+                                  "initrd=0xb00000,0xc00000", bootargs)
+                                  
+        # setup cmdlinepart.mtdparts=... to set the partitions for cases where 'cmdlinepart' is build as external module 
+        # (which is the current Debian behavior)
+        bootargs_new = bootargs_new + f' cmdlinepart.mtdparts="{NEW_MTDPARTS}"'
+        
+        # also add mtdparts=... if for some reasons in future, Debian will switch to internal module or if users are
+        # building their own kernel with such configuration
+        bootargs_new = bootargs_new + f' mtdparts="{NEW_MTDPARTS}"'
 
-except KeyError as e:
-    print(str(e))
-    print("Don't know how to patch 'bootargs' for this model. Please report this log.")
-    exit(1)
+    except KeyError as e:
+        print(str(e))
+        print("Don't know how to patch 'bootargs' for this model. Please report this log.")
+        exit(1)
     
-print("   Old:", bootargs)
-print("   New:", bootargs_new)
+    print("   Old:", bootargs)
+    print("   New:", bootargs_new)
 
 
 
@@ -281,12 +313,25 @@ print("   New:", bootargs_new)
 ###################################################################
 print("\n[Prepare fw_setenv script (/tmp/fw_setenv.script)]")
 
-script=f"""
+script=""
+
+if not args.skip_bootargs:
+    script += f"""
 bootargs_backup    {bootargs}
-bootcmd_backup     {bootcmd}
 bootargs           {bootargs_new}
+"""
+
+if not args.skip_bootcmd:
+    script += f"""
+bootcmd_backup     {bootcmd}
 bootcmd            {bootcmd_new}
 """
+
+if args.setenv_script_append:
+    print(f"Append {args.setenv_script_append}")
+    script += setenv_script_append_content
+
+
 with open("/tmp/fw_setenv.script", "w") as F:
     F.write(script)
     
