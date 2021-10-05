@@ -199,6 +199,7 @@ echo "COMPRESS=xz" > /etc/initramfs-tools/conf.d/compress
 | --------------------------------------- | ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------ | ---- | ---- |
 | TS-212P | QNAP TS219 family                       | kirkwood-ts219-6282.dtb |                                                              |                                                              | [log](resources/QNAP_TS212P_log.txt) |      |
 | TS-219P | QNAP TS219 family                       | kirkwood-ts219-6281.dtb |                                                              |                                                              |                                            |      |
+| TS-212 | QNAP TS219 family | kirkwood-ts219-6281.dtb | | | [log](resources/QNAP_TS212_dryrun_log.txt) | |
 |TS-419PII | QNAP TS419 family                       | kirkwood-ts419-6282.dtb | [QNAP_TS419_family,uboot-env.legacy](resources/QNAP_TS419_family,uboot-env.legacy) | [QNAP_TS419_family,uboot-env.new](resources/QNAP_TS419_family,uboot-env.new) | [log](resources/QNAP_TS419_family_log.txt) |      |
-|                                         |                         |                                                              |                                                              |                                            |      ||
+|  |                         |                                                              |                                                              |                                            |      ||
 
