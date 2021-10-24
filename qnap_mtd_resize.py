@@ -75,6 +75,7 @@ import sys
 # DTB files returned by /usr/share/flash-kernel/dtb-probe/kirkwood-qnap
 TESTED_QNAP_DTB = [
     "kirkwood-ts219-6281.dtb",
+    "kirkwood-ts219-6282.dtb",
     "kirkwood-ts419-6282.dtb",
     ]
 
