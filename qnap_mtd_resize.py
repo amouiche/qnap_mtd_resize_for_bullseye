@@ -168,8 +168,8 @@ mtd_uboot_config, _, _ = mtd_lookup("U-Boot Config")
 for tool_cmd in [
         "/sbin/flashcp -V", 
         "/sbin/flash_erase --version", 
-        "/usr/bin/fw_setenv -v", 
-        "/usr/bin/fw_printenv -v",
+        "/usr/bin/fw_setenv --version",
+        "/usr/bin/fw_printenv --version",
         ]:
     print("Checking:", tool_cmd)
     try:
@@ -281,11 +281,15 @@ print("   New:", bootargs_new)
 ###################################################################
 print("\n[Prepare fw_setenv script (/tmp/fw_setenv.script)]")
 
+# the (undocumented) syntax with '=' is supported by fw_setenv
+# on both Buster (u-boot-tools) and Bullseye (libubootenv-tool),
+# whereas the syntax without '=' is not supported in Bullseye
+# and produces undesired effects (ie. non-bootable systems)
 script=f"""
-bootargs_backup    {bootargs}
-bootcmd_backup     {bootcmd}
-bootargs           {bootargs_new}
-bootcmd            {bootcmd_new}
+bootargs_backup={bootargs}
+bootcmd_backup={bootcmd}
+bootargs={bootargs_new}
+bootcmd={bootcmd_new}
 """
 with open("/tmp/fw_setenv.script", "w") as F:
     F.write(script)
