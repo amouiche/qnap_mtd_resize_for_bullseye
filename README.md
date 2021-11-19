@@ -27,7 +27,9 @@ With this new layout, we can transparently upgrade to Bullseye
 - More room for kernel and initrd
 - Future kernel updates performed during `apt upgrade`will use the new layout without any further change or manual operations.
 
-## Kernel and MTD partitions
+## Kernel and MTD partitions (for your information only)
+
+(This section is for documentation only. You can skip it and go directly to the "[Resize process](#Resize process)" section...)
 
 Linux has 2 methods for configuring the partitions.
 
