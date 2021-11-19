@@ -512,10 +512,12 @@ else:
 ###################################################################
 print("-"*60)
 print("""
-    SUCCESS. You can reboot now.
+    SUCCESS. 
+
+    Now, REBOOT !
     
     Notes: 
-    - Don't perform kernel or system update before the next reboot... 
+    - DO NOT PERFORM A KERNEL OR SYSTEM UPDATE before the next reboot !... 
       so don't wait too long.
     - Consider compressing initrd with 'xz' to optimize the size with:
     
