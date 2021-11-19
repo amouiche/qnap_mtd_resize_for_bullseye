@@ -104,8 +104,29 @@ def str_replace(search, replace, text):
     if result == text:
         raise KeyError(f"'{search}' not found in '{text}'")
     return result
-        
-        
+
+
+def try_shell_cmd(cmd, on_error=None):
+    """
+        Execute 'cmd' just to see if it returns 0 (and everything is fine) 
+        or something else due to:
+        - missing executable
+        - wrong executable version
+
+        if 'on_error' is not None, display the 'on_error' message and exit
+
+        Return True is success, False otherwise
+    """
+    try:
+        subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        return True
+    except:
+        if on_error:
+            print(on_error)
+            exit(1)
+        return False
+
+
 
 
 parser = argparse.ArgumentParser(
@@ -192,16 +213,28 @@ os.environ["PATH"] += ":/sbin:/usr/sbin"
 for tool_cmd in [
         "flashcp -V", 
         "flash_erase --version", 
-        "fw_setenv -v", 
-        "fw_printenv -v",
         ]:
     print("Checking:", tool_cmd)
-    try:
-        subprocess.check_output(tool_cmd, shell=True)
-    except:
-        print("Failed. Please see manually if correctly installed")
-        exit(1)
+    try_shell_cmd(tool_cmd, on_error=f"'{tool_cmd}' Failed. Please see manually if correctly installed")
+
         
+
+# check if fw_setenv is coming from "libubootenv-tool" package (bullseye) or "u-boot-tools" package (buster)
+# There are some little differences to take in count
+if try_shell_cmd("fw_setenv -v"):
+    print("ici")
+    print("Using 'u-boot-tools' package")
+    has_libubootenv = False
+    try_shell_cmd("fw_printenv -v", on_error="'fw_printenv -v' Failed. Please see manually if correctly installed")
+elif try_shell_cmd("fw_setenv -V"):
+    print("Using 'libubootenv-tool' package")
+    has_libubootenv = True
+    try_shell_cmd("fw_printenv -V", on_error="'fw_printenv -V' Failed. Please see manually if correctly installed")
+else:
+    print("'fw_setenv' is Missing. Please see manually if correctly installed")
+    exit(1)
+
+
     
 # root ?
 if os.getuid() != 0:
@@ -318,16 +351,24 @@ print("\n[Prepare fw_setenv script (/tmp/fw_setenv.script)]")
 
 script=""
 
+
+# fw_set env differs in script syntax if the tool is coming from libubootenv or not
+if has_libubootenv:
+    equal="="
+else:
+    equal=" "
+
+
 if not args.skip_bootargs:
     script += f"""
-bootargs_backup    {bootargs}
-bootargs           {bootargs_new}
+bootargs_backup{equal}{bootargs}
+bootargs{equal}{bootargs_new}
 """
 
 if not args.skip_bootcmd:
     script += f"""
-bootcmd_backup     {bootcmd}
-bootcmd            {bootcmd_new}
+bootcmd_backup{equal}{bootcmd}
+bootcmd{equal}{bootcmd_new}
 """
 
 if args.setenv_script_append:
