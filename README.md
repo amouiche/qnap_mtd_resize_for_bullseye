@@ -113,7 +113,7 @@ The `qnap_mtd_resize.py` script will:
 - Resize the "NAS config" filesystem
 - Prepare the content of current "NAS config" partition (offset 0xc0000 to 0x200000) with the shrink FS + first 1MB of the current kernel
 - prepare the image of current "Kernel" partition (starting at 0x200000) with tail of the current kernel
-- Patch U-boot env/config for the new `bootargs`and `bootcmd`variables.
+- Patch U-boot env/config for the new `bootargs`and `bootcmd`variables, to boot either from the new kernel layout (kernel @ 0x100000) or the legacy as a fallback (kernel @ 0x200000)
 - Write flash from 0xc0000 to 0x200000 ("NAS config" + 1MB head of kernel)
 - write flash from 0x200000 with 1MB tail of kernel.
 

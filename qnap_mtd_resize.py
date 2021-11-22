@@ -307,6 +307,15 @@ else:
                                   "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
         bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000", 
                                   "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
+                                  
+        # in case of QNAP TFTPBOOT recovery (ie. pressing reset button during boot + running live-cd-20130730.iso from VM)
+        # uboot will:
+        # - flash the legacy kernel at flash offset 0x200000
+        # - flash the legacy rootfs at flash offset 0x400000
+        # - DOESN'T restore the original uboot env
+        # If we want to be able to boot after a QNAP TFTPBOOT recovery, our "bootcmd" must be able to fallback
+        # to a kernel at flash 0x200000 (which is loaded in memory at 0x900000 when we load ou 3MB kernel from flash 0x100000)
+        bootcmd_new += ";echo Kernel_legacy layout fallback;bootm 0x900000"
     except KeyError as e:
         print(str(e))
         print("Don't know how to patch 'bootcmd' for this model. Please report this log.")
