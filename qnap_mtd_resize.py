@@ -303,10 +303,20 @@ if args.skip_bootcmd:
 else:
     print("\n[Prepare new 'bootcmd']")
     try:
-        bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
-                                  "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
-        bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000", 
-                                  "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
+        if bootcmd.find("cp.l") >= 0:
+            # most common configuration
+            bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
+                                      "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
+            bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000",
+                                      "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
+        elif bootcmd.find("cp.b") >= 0:
+            # some old configurations are using cp.b
+            bootcmd_new = str_replace("cp.b 0xf8200000 0x800000 0x200000",
+                                      "cp.b 0xf8100000 0x800000 0x300000", bootcmd)
+            bootcmd_new = str_replace("cp.b 0xf8400000 0xa00000 0x900000",
+                                      "cp.b 0xf8400000 0xb00000 0xc00000", bootcmd_new)
+        else:
+            raise KeyError("bootcmd not using 'cp.l' nor 'cp.b'")
                                   
         # in case of QNAP TFTPBOOT recovery (ie. pressing reset button during boot + running live-cd-20130730.iso from VM)
         # uboot will:
