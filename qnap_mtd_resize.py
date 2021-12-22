@@ -221,17 +221,21 @@ for tool_cmd in [
 
 # check if fw_setenv is coming from "libubootenv-tool" package (bullseye) or "u-boot-tools" package (buster)
 # There are some little differences to take in count
-if try_shell_cmd("fw_setenv -v"):
-    print("ici")
+if (    try_shell_cmd("fw_setenv -v") and 
+        try_shell_cmd("fw_setenv -h 2>&1 | grep 'Modify variables in U-Boot environment' -q") and 
+        try_shell_cmd("fw_setenv -h 2>&1 | grep -q -- --lock")
+        ):
     print("Using 'u-boot-tools' package")
     has_libubootenv = False
     try_shell_cmd("fw_printenv -v", on_error="'fw_printenv -v' Failed. Please see manually if correctly installed")
-elif try_shell_cmd("fw_setenv -V"):
+elif (try_shell_cmd("fw_setenv -V") and 
+        try_shell_cmd("fw_setenv -h 2>&1 | grep -q -- --defenv")
+        ):
     print("Using 'libubootenv-tool' package")
     has_libubootenv = True
     try_shell_cmd("fw_printenv -V", on_error="'fw_printenv -V' Failed. Please see manually if correctly installed")
 else:
-    print("'fw_setenv' is Missing. Please see manually if correctly installed")
+    print("'fw_setenv' is missing or its version can't be defined. Please see manually if correctly installed")
     exit(1)
 
 
