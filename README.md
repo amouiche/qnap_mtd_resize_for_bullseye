@@ -199,6 +199,7 @@ echo "COMPRESS=xz" > /etc/initramfs-tools/conf.d/compress
 
 |Model| cat /sys/firmware/devicetree/base/model | DTB file                | uboot env<br>(legacy)                                        | uboot_env<br>(new)                                           | Resize log                                 |      |
 | --------------------------------------- | ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------ | ---- | ---- |
+| TS-210 | QNAP TS219 family                       | kirkwood-ts219-6281.dtb |                                                              |                                                              | [log](resources/QNAP_TS210_log.txt) |      |
 | TS-212P | QNAP TS219 family                       | kirkwood-ts219-6282.dtb |                                                              |                                                              | [log](resources/QNAP_TS212P_log.txt) |      |
 | TS-219P | QNAP TS219 family                       | kirkwood-ts219-6281.dtb |                                                              |                                                              |                                            |      |
 | TS-212 | QNAP TS219 family | kirkwood-ts219-6281.dtb | | | [log](resources/QNAP_TS212_dryrun_log.txt) | |
