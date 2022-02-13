@@ -1,0 +1,143 @@
+root@debian:~# ./qnap_mtd_resize.py 
+
+[Check of the QNAP model and see if supported]
+kirkwood-qnap: machine: QNAP TS219 family
+DTB file: kirkwood-ts219-6281.dtb
+Checking: flashcp -V
+Checking: flash_erase --version
+Using 'u-boot-tools' package
+
+[find on which MTD device partitions are currently mounted]
+   spi0.0
+
+[Dump current U-boot config']
+Current U-boot bootcmd:
+    uart1 0x68;cp.l 0xf8200000 0x800000 0x80000;cp.l 0xf8400000 0xa00000 0x240000;bootm 0x800000
+Current U-boot bootargs:
+    console=ttyS0,115200 root=/dev/ram initrd=0xa00000,0x900000 ramdisk=32768
+
+[Prepare new 'bootcmd']
+   Old: uart1 0x68;cp.l 0xf8200000 0x800000 0x80000;cp.l 0xf8400000 0xa00000 0x240000;bootm 0x800000
+   New: uart1 0x68;cp.l 0xf8100000 0x800000 0xc0000;cp.l 0xf8400000 0xb00000 0x300000;bootm 0x800000;echo Kernel_legacy layout fallback;bootm 0x900000
+
+[Prepare new 'bootargs']
+   Old: console=ttyS0,115200 root=/dev/ram initrd=0xa00000,0x900000 ramdisk=32768
+   New: console=ttyS0,115200 root=/dev/ram initrd=0xb00000,0xc00000 ramdisk=32768 cmdlinepart.mtdparts="spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot Config),256k@0xc0000(NAS Config)" mtdparts="spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot Config),256k@0xc0000(NAS Config)"
+
+[Prepare fw_setenv script (/tmp/fw_setenv.script)]
+
+[Dump current 'NAS config' and 'Kernel' images]
++ cat /dev/mtd5
+[Resize 'NAS config' dump from 1280KB to 256KB.]
++ modprobe loop
++ losetup --show -f /tmp/mtd_nas_config.dump
++ loopdev=/dev/loop0
++ e2fsck -f -p -v /dev/loop0
+
+          20 inodes used (15.62%, out of 128)
+           1 non-contiguous file (5.0%)
+           0 non-contiguous directories (0.0%)
+             # of inodes with ind/dind/tind blocks: 0/0/0
+          58 blocks used (5.66%, out of 1024)
+           0 bad blocks
+           0 large files
+
+           9 regular files
+           2 directories
+           0 character device files
+           0 block device files
+           0 fifos
+           0 links
+           0 symbolic links (0 fast symbolic links)
+           0 sockets
+------------
+          11 files
++ true
++ e2fsck -f -p -v /dev/loop0
+
+          20 inodes used (15.62%, out of 128)
+           1 non-contiguous file (5.0%)
+           0 non-contiguous directories (0.0%)
+             # of inodes with ind/dind/tind blocks: 0/0/0
+          58 blocks used (5.66%, out of 1024)
+           0 bad blocks
+           0 large files
+
+           9 regular files
+           2 directories
+           0 character device files
+           0 block device files
+           0 fifos
+           0 links
+           0 symbolic links (0 fast symbolic links)
+           0 sockets
+------------
+          11 files
++ resize2fs /dev/loop0 128
+resize2fs 1.44.5 (15-Dec-2018)
+Resizing the filesystem on /dev/loop0 to 128 (1k) blocks.
+The filesystem on /dev/loop0 is now 128 (1k) blocks long.
+
++ losetup -d /dev/loop0
+
+[Concatenate first 256K of 'NAS config' with first 1MB of Kernel > /tmp/mtd_nas_config.new]
+
+[Prepare second 1MB of kernel tail > /tmp/mtd_kernel.tail]
+------------------------------------------------------------
+    !!!! Warning !!!!
+
+    Everything is fine up to now.
+    Next steps will write the flash and may be subject to failures.
+    
+    It is highly recommended to perform a MTD backup and save the files
+    somewhere (USB device, PC)
+    
+        cat /dev/mtd0 > /tmp/mtd0.uboot.backup
+        cat /dev/mtd1 > /tmp/mtd1.kernel.backup
+        cat /dev/mtd2 > /tmp/mtd2.rootfs1.backup
+        cat /dev/mtd3 > /tmp/mtd3.rootfs2.backup
+        cat /dev/mtd4 > /tmp/mtd4.uboot-config.backup
+        cat /dev/mtd5 > /tmp/mtd5.nas-config.backup
+        fw_printenv -c /tmp/fw_env.config  > /tmp/uboot_config.backup.txt
+        cd /tmp
+        tar cvzf mtd_backup.tgz mtd?.*.backup uboot_config.backup.txt
+        
+        # now use scp / sftp to push/pull mtd_backup.tgz on another PC.
+    
+    Be sure you will not cut the power until the end of operations.
+    In case of failure, you way need to recover with a Serial Console 
+    to run U-boot commands
+    
+        https://www.cyrius.com/debian/kirkwood/qnap/ts-219/serial/
+    
+Continue and flash the new partitions ? (y/N)
+y
+
+[Flash 'NAS config' partition content (ie 'NAS config' + head of Kernel) (still a 'safe' op)]
++ flashcp -v /tmp/mtd_nas_config.new /dev/mtd5
+Erasing blocks: 5/5 (100%)
+Writing data: 1280k/1280k (100%)
+Verifying data: 1280k/1280k (100%)
+
+[Change U-boot config with new values)]
++ fw_setenv -c /tmp/fw_env.config -s /tmp/fw_setenv.script
+
+[Flash tail of the kernel in old 'Kernel' Partition]
++ flashcp -v /tmp/mtd_kernel.tail /dev/mtd1
+Erasing blocks: 4/4 (100%)
+Writing data: 1024k/1024k (100%)
+Verifying data: 1024k/1024k (100%)
+------------------------------------------------------------
+
+    SUCCESS. 
+
+    Now, REBOOT !
+    
+    Notes: 
+    - DO NOT PERFORM A KERNEL OR SYSTEM UPDATE before the next reboot !... 
+      so don't wait too long.
+    - Consider compressing initrd with 'xz' to optimize the size with:
+    
+        echo "COMPRESS=xz" > /etc/initramfs-tools/conf.d/compress
+
+    
