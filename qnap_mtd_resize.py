@@ -69,6 +69,7 @@ import argparse
 import logging
 import re
 import sys
+import shutil
 
 
 # list here the model of tested QNAP device by listing the
@@ -530,6 +531,14 @@ if not args.dry_run:
 else:
     print("(Dry run)")
     print("+", cmd)
+
+
+###################################################################
+print("\n[Make a copy of /tmp/fw_env.config into /etc/fw_env.config (if not already existing)]")
+if not args.dry_run:
+    if not os.path.exists("/etc/fw_env.config"):
+        shutil.copy("/tmp/fw_env.config", "/etc/fw_env.config")
+
 
 
 ###################################################################
