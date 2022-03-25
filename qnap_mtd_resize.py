@@ -53,9 +53,9 @@
            bootcmd=uart1 0x68;cp.l 0xf8100000 0x800000 0xc0000;cp.l 0xf8400000 0xb00000 0x300000;bootm 0x800000
            
            boorargs=console=ttyS0,115200 root=/dev/ram initrd=0xb00000,0xc00000 ramdisk=32768 \ 
-                    cmdlinepart.mtdparts="spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),\
-                    12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot Config),\
-                    256k@0xc0000(NAS Config)"
+                    cmdlinepart.mtdparts=spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),\
+                    12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot_Config),\
+                    256k@0xc0000(NAS_Config)
     
      
 
@@ -81,19 +81,19 @@ TESTED_QNAP_DTB = [
     ]
 
 
-def mtd_lookup(name):
+def mtd_lookup(*names):
     """
-        For a given MTD partition name, return a tuple
-        ("mtdX", size, erasesize)
+        For a list of MTD partition names, return a tuple
+        ("mtdX", size, erasesize) of the first match
         Raise a KeyError exception if not found.
     """
     for line in open("/proc/mtd").readlines():
         m = re.match(r'(mtd[0-9]+): ([0-9a-f]+) ([0-9a-f]+) "(.+)"', line.strip())
         if not m:
             continue
-        if m.group(4) == name:
+        if m.group(4) in names:
             return (m.group(1), int(m.group(2), 16), int(m.group(3), 16))
-    raise KeyError(f"No mtd '{name}' device found.")
+    raise KeyError(f"No mtd {names} device found.")
     
 
 def str_replace(search, replace, text):
@@ -198,12 +198,12 @@ if size != 0x900000:
     exit(1)
  
  
-mtd_nas_config, size, _ = mtd_lookup("NAS Config")
+mtd_nas_config, size, _ = mtd_lookup("NAS Config", "NAS_Config")
 if size != 0x00140000:
     print("'NAS config' has already been resized. Can't process further safely.")
     exit(1)
     
-mtd_uboot_config, _, _ = mtd_lookup("U-Boot Config")
+mtd_uboot_config, _, _ = mtd_lookup("U-Boot Config", "U-Boot_Config")
 
 
 
@@ -293,7 +293,7 @@ print("Current U-boot bootargs:\n   ", bootargs)
 # Creating 6 MTD partitions on "spi0.0"
 
 
-NEW_MTDPARTS=f"{mtd_master}:512k@0(uboot)ro,3M@0x100000(Kernel),12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot Config),256k@0xc0000(NAS Config)"
+NEW_MTDPARTS=f"{mtd_master}:512k@0(uboot)ro,3M@0x100000(Kernel),12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot_Config),256k@0xc0000(NAS_Config)"
 
     
     
@@ -344,7 +344,7 @@ else:
 if args.skip_bootargs:
     print("\n[Skipping 'bootargs patching']")
     print("You should manual modify the uboot env variable to add the following lines to your kernel cmdline/bootagrgs:")
-    print(f' cmdlinepart.mtdparts="{NEW_MTDPARTS}" mtdparts="{NEW_MTDPARTS}"')
+    print(f' cmdlinepart.mtdparts={NEW_MTDPARTS} mtdparts={NEW_MTDPARTS}')
 else:
     print("\n[Prepare new 'bootargs']")
     try:
@@ -353,11 +353,11 @@ else:
                                   
         # setup cmdlinepart.mtdparts=... to set the partitions for cases where 'cmdlinepart' is build as external module 
         # (which is the current Debian behavior)
-        bootargs_new = bootargs_new + f' cmdlinepart.mtdparts="{NEW_MTDPARTS}"'
+        bootargs_new = bootargs_new + f' cmdlinepart.mtdparts={NEW_MTDPARTS}'
         
         # also add mtdparts=... if for some reasons in future, Debian will switch to internal module or if users are
         # building their own kernel with such configuration
-        bootargs_new = bootargs_new + f' mtdparts="{NEW_MTDPARTS}"'
+        bootargs_new = bootargs_new + f' mtdparts={NEW_MTDPARTS}'
 
     except KeyError as e:
         print(str(e))
