@@ -1,0 +1,169 @@
+#!/bin/sh
+
+# This code is covered by the GNU General Public License (GPLv2 or higher)
+
+# 1) Check the files are okay
+
+if [ ! -e initrd ]; then
+	echo "You have to download the initrd file from the debian-installer for QNAP."
+	exit 1
+fi
+
+ifilesize=$(ls -l initrd | awk '{print $5}')
+# The ramdisk partition is 4 MB on the QNAP TS-109 and TS-209, and
+# 9 MB on the QNAP TS-119, TS-219 and TS-219P.
+if [ $ifilesize -ne 4194304 -a $ifilesize -ne 9437184 ]; then
+	echo "The initrd file is corrupt"
+	exit 1
+fi
+
+# 2) Ensure that the right installer files are used
+qnap=$(getcfg System Model)
+if [ -n "$qnap" ]; then
+	case "$qnap" in
+		"TS-109"* | "TS-209"*)
+			qnap="TS-109/TS-209"
+		;;
+		"TS-409"*)
+			qnap="TS-409"
+		;;
+		 "HS-210"* | "Q600" | "Q700" | "TS-110"* | "TS-112"* | "TS-119"* | "TS-210"* | "TS-212"* | "TS-219"*)
+			qnap="TS-11x/TS-21x"
+		;;
+		"TS-120"* | "TS-121"* | "TS-220"* | "TS-221"*)
+			qnap="TS-11x/TS-21x"
+		;;
+		"TS-410"* | "TS-412"* | "TS-419"*)
+			qnap="TS-41x"
+		;;
+		"TS-420"* | "TS-421"*)
+			qnap="TS-41x"
+		;;
+		*)
+			echo "Unknown QNAP model $model: please report this to debian-arm@lists.debian.org"
+			exit 1
+		;;
+	esac
+	if [ -e model ]; then
+		debian=$(cat model)
+		if [ "$debian" != "$qnap" ]; then
+			echo "Installation files don't match system model:"
+			echo "  System model: $qnap"
+			echo "  Installation files: $debian"
+			echo "Please download the correct installation files."
+			exit 1
+		fi
+	fi
+fi
+
+# 3) Determine the CPU variant
+if [ ! -e /proc/cpuinfo ]; then
+	echo "Cannot determine CPU as /proc/cpuinfo doesn't exist"
+	exit 1
+fi
+
+# cpuinfo should contain "Processor name" or "Processor"
+cpu=$(grep "^Processor" /proc/cpuinfo)
+if [ -z "$cpu" ]; then
+	echo "Cannot determine CPU from /proc/cpuinfo"
+	exit 1
+fi
+
+case "$cpu" in
+	*"ARM926EJ"*)
+		kernel="kernel"
+		;;
+	*"88F6281"*)
+		kernel="kernel-6281"
+		;;
+	*"88F6282"*)
+		kernel="kernel-6282"
+		;;
+	*)
+		echo "Cannot determine CPU variant"
+		exit 1
+		;;
+esac
+
+if [ ! -e $kernel ]; then
+	echo "You have to download the $kernel file from the debian-installer for QNAP."
+	exit 1
+fi
+
+# 4) Change the MAC address on Kirkwood-based QNAP devices
+uboot_mac() {
+	ubootcfg -b 0 -f /dev/mtdblock4 -o - | grep "^ethaddr=" | sed "s/^ethaddr=//"
+}
+
+valid_mac() {
+	mac="$1"
+	if [ -z "$mac" ]; then
+		return 1
+	fi
+	if [ "$mac" = "00:00:00:00:05:09" ]; then
+		return 1
+	fi
+	if [ -n "$(echo "$mac" | sed "s/^..:..:..:..:..:..$//")" ]; then
+		return 1
+	fi
+	return 0
+}
+
+if [ $ifilesize -eq 9437184 ]; then
+	if which iface_get_mac > /dev/null && valid_mac "$(iface_get_mac eth0)"; then
+		eth0=$(iface_get_mac eth0)
+	elif which get_mac > /dev/null && valid_mac "$(get_mac)"; then
+		eth0=$(get_mac)
+	fi
+	if [ -z "$eth0" ]; then
+		echo "Failed to obtain MAC address"
+		exit 1
+	fi
+	if [ "$(uboot_mac)" != "$eth0" ]; then
+		echo "Updating MAC address..."
+		orig=$(ubootcfg -b 0 -f /dev/mtdblock4 -o - | grep -v "^eth" | cksum | cut -d " " -f 1)
+		ubootcfg -b 0 -f /dev/mtdblock4 -o - | sed "s/^ethaddr=.*/ethaddr=$eth0/" > /tmp/debian.$$
+		if which iface_get_mac > /dev/null && valid_mac "$(iface_get_mac eth1)"; then
+			eth1=$(iface_get_mac eth1)
+			if ! grep -q "^eth1addr=" /tmp/debian.$$ ; then
+				echo "eth1addr=$eth1" >> /tmp/debian.$$
+			fi
+		fi
+		conf=$(grep -v "^eth" /tmp/debian.$$ | cksum | cut -d " " -f 1)
+		if [ "$orig" != "$conf" -o "`cat /tmp/debian.$$`" == "" ]; then
+			echo "Failed to generate new u-boot configuration."
+			rm -f /tmp/debian.$$
+			exit 1
+		fi
+		ubootcfg -b 0 -f /dev/mtdblock4 -i /tmp/debian.$$
+		if [ "$?" != 0 ]; then
+			echo "Error writing new configuration to flash.  Please check if your"
+			echo "configuration looks correct with:"
+			echo "    ubootcfg -b 0 -f /dev/mtdblock4 -o -"
+			rm -f /tmp/debian.$$
+			exit 1
+		fi
+		rm -f /tmp/debian.$$
+	fi
+	echo "Your MAC address is $(uboot_mac)"
+	
+fi
+
+# 4) Copy uLinux.conf in case it's not there so we can identify the QNAP model
+path=/tmp/nasconfig_tmp
+mkdir -p $path
+if mount -o rw -t ext2 /dev/mtdblock5 $path; then
+	if [ ! -e $path/uLinux.conf ]; then
+		cp /etc/config/uLinux.conf $path
+	fi
+	umount $path
+fi
+rmdir $path
+
+# 5) Finally, write the installer to flash
+printf "Writing debian-installer to flash... "
+cat $kernel > /dev/mtdblock1
+cat initrd > /dev/mtdblock2
+echo "done."
+echo "Please reboot your QNAP device."
+
