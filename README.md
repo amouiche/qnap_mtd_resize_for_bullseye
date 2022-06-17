@@ -50,7 +50,14 @@ tar cvzf mtd_backup.tgz mtd?.*.backup
 
 And save this `mtd_backup.tgz`on your PC, transfering the file with scp / sftp or a USB drive....
 
-### Then, run qnap_mtd_resize.py
+### Then, donwload and run qnap_mtd_resize.py
+
+You can download directly the script:
+
+```
+wget https://raw.githubusercontent.com/amouiche/qnap_mtd_resize_for_bullseye/master/qnap_mtd_resize.py
+chmod a+x qnap_mtd_resize.py
+```
 
 A first run with `--dry-run`option to check that everything will be fine (except flashing)
 
