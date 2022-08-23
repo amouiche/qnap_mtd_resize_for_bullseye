@@ -1,0 +1,50 @@
+baudrate=115200
+loads_echo=0
+rootpath=/mnt/ARM_FS/
+console=console=ttyS0,115200 mtdparts=cfi_flash:0xf40000(root),0xc0000(uboot)ro
+CASset=min
+MALLOC_len=1
+ethprime=egiga0
+bootargs_root=root=/dev/nfs rw
+bootargs_end=:::DB88FXX81:eth0:none
+image_name=uImage
+standalone=fsload 0x2000000 $(image_name);setenv bootargs $(console) root=/dev/mtdblock0 rw ip=$(ipaddr):$(serverip)$(bootargs_end) $(mvPhoneConfig); bootm 0x2000000;
+ethaddr=00:08:9B:C4:25:62
+mvPhoneConfig=mv_phone_config=dev0:fxs,dev1:fxo
+mvNetConfig=mv_net_config=(00:11:88:0f:62:81,0:1:2:3),mtu=1500
+usb0Mode=host
+yuk_ethaddr=00:00:00:EE:51:81
+netretry=no
+rcvrip=169.254.100.100
+loadaddr=0x02000000
+autoload=no
+ethact=egiga0
+update=tftp 0x800000 uImage; tftp 0xa00000 rootfs.gz;bootm 0x800000
+filesize=36464c
+fileaddr=A00000
+bootcmd=cp.l 0xf8200000 0x800000 0x80000;cp.l 0xf8400000 0xa00000 0x240000;bootm 0x800000
+ipaddr=172.17.21.248
+serverip=172.17.21.7
+netmask=255.255.254.0
+bootargs=console=ttyS0,115200 root=/dev/ram initrd=0xa00000,0x900000 ramdisk=32768
+stdin=serial
+stdout=serial
+stderr=serial
+mainlineLinux=no
+enaMonExt=no
+enaCpuStream=no
+enaWrAllo=no
+pexMode=RC
+disL2Cache=no
+setL2CacheWT=yes
+disL2Prefetch=yes
+enaICPref=yes
+enaDCPref=yes
+sata_dma_mode=yes
+netbsd_en=no
+vxworks_en=no
+bootdelay=3
+disaMvPnp=no
+enaAutoRecovery=yes
+bootp_vendor_class=F_TS-419P
+eth1addr=00:08:9B:C4:25:63
