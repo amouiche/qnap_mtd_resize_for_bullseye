@@ -1,6 +1,6 @@
 # QNAP partitions resize for kirkwood devices.
 
-As [explained by Marin Michlmayr](https://www.cyrius.com/debian/kirkwood/qnap/ts-219/upgrade/), Debian bullseye support on kirkwood QNAP devices was dropped due to [mainly] the limited size of the Kernel partition (2MB).
+As [explained by Martin Michlmayr](https://www.cyrius.com/debian/kirkwood/qnap/ts-219/upgrade/), Debian bullseye support on kirkwood QNAP devices was dropped due to [mainly] the limited size of the Kernel partition (2MB).
 
 Indeed, Bullseye current kernel image (vmlinuz-5.10.0-8-marvell) is 2445216 bytes long (2.3MB)
 
