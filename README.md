@@ -106,7 +106,7 @@ Flashing initramfs (using 3992060/12582912 bytes)... done.
 
 
 
-## Additional configuration to improve`initrd` size
+## Additional configuration to improve `initrd` size
 
 Even if we increase Rootfs1 from 9 to 12 MB, you can still decrease the initrd size by compressing with `xz`
 
@@ -114,7 +114,14 @@ Even if we increase Rootfs1 from 9 to 12 MB, you can still decrease the initrd s
 echo "COMPRESS=xz" > /etc/initramfs-tools/conf.d/compress
 ```
 
+# Recovery after resize
 
+You need to install Debian again for some reasons ? You want to restore the very original QNAP firmware ?
+
+Please, read [Recovery.md](Recovery.md). 
+
+- What you need to know
+- Possible issues and workaroud
 
 # List of tested devices:
 
