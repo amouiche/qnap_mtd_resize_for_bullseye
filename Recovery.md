@@ -91,7 +91,7 @@ for i in 1 2 3 4 5; do cp -v mtd$i /dev/mtdblock$i; done
 Now just reboot
 
 ```
-reboot -f
+reboot
 ```
 
 
@@ -187,4 +187,3 @@ Finalize with a reboot
 reboot -f
 ```
 
-You 
