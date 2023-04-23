@@ -138,3 +138,9 @@ Please, read [Recovery.md](Recovery.md).
 | TS-419PII | QNAP TS419 family | kirkwood-ts419-6282.dtb | [QNAP_TS419_family,uboot-env.legacy](resources/QNAP_TS419_family,uboot-env.legacy) | [QNAP_TS419_family,uboot-env.new](resources/QNAP_TS419_family,uboot-env.new) | [log](resources/QNAP_TS419_family_log.txt) | |
 | | | | | | | |
 
+# Devices <u>not</u> supported
+
+**TS109** and **TS209** only have 8MB of Flash. The maximum size we can expect for the kernel after resizing is 2432 KiB. The rootfs, itself, can be resized from 4 to a max of 5MiB.
+This is definitely too small for future debian requirements.
+
+Also, I don't have such device to develop and test the resizing process...
