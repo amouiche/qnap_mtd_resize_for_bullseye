@@ -35,8 +35,8 @@
     
                             offset     size
         uboot          0x00000000 0x00080000  512KiB  /dev/mtd0
-        U-Boot Config  0x00080000 0x00040000  256KiB  /dev/mtd4
-        NAS Config     0x000c0000 0x00040000  256KiB  /dev/mtd5
+        U-Boot_Config  0x00080000 0x00040000  256KiB  /dev/mtd4
+        NAS_Config     0x000c0000 0x00040000  256KiB  /dev/mtd5
         Kernel         0x00100000 0x00300000  3MiB    /dev/mtd1
         RootFS1        0x00400000 0x00c00000  12MiB   /dev/mtd2
         Kernel_legacy  0x00200000 0x00200000  2MiB    /dev/mtd3  (legacy Kernel range, overlap with new Kernel)
@@ -50,7 +50,8 @@
            boorargs=console=ttyS0,115200 root=/dev/ram initrd=0xa00000,0x900000 ramdisk=32768
            
         New U-boot env
-           bootcmd=uart1 0x68;cp.l 0xf8100000 0x800000 0xc0000;cp.l 0xf8400000 0xb00000 0x300000;bootm 0x800000
+           bootcmd=uart1 0x68;cp.l 0xf8100000 0x800000 0xc0000;cp.l 0xf8400000 0xb00000 0x300000;bootm 0x800000;\
+                    echo Kernel_legacy layout fallback;bootm 0x900000
            
            boorargs=console=ttyS0,115200 root=/dev/ram initrd=0xb00000,0xc00000 ramdisk=32768 \ 
                     cmdlinepart.mtdparts=spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),\
