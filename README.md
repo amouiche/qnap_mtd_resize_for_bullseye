@@ -1,8 +1,12 @@
-# QNAP partitions resize for kirkwood devices.
+# QNAP partitions resize for kirkwood devices on Debian (Bullseye, Bookworm)
 
-As [explained by Martin Michlmayr](https://www.cyrius.com/debian/kirkwood/qnap/ts-219/upgrade/), Debian bullseye support on kirkwood QNAP devices was dropped due to [mainly] the limited size of the Kernel partition (2MB).
+As [explained by Martin Michlmayr](https://www.cyrius.com/debian/kirkwood/qnap/ts-219/upgrade/), since Debian bullseye support on kirkwood QNAP devices was dropped due to [mainly] the limited size of the Kernel partition (2MB).
 
-Indeed, Bullseye current kernel image (vmlinuz-5.10.0-8-marvell) is 2445216 bytes long (2.3MB)
+Indeed:
+
+- Bullseye standard kernel image (eg. vmlinuz-5.10.0-8-marvell) is 2445216 bytes long (2.3MiB).
+
+- Bookworm (eg. vmlinuz-6.1.0-9-marvell ) is 2678784 bytes (2.55MiB)
 
 In addition, partition for initrd is also limited (9MB) which may lead to space issues.
 
@@ -10,6 +14,8 @@ Hopefully, some space is still unused for Debian in QNAP 16MB NOR flash.
 
 - An additional 3MB Rootfs2 partition is used by original QNAP firmware for its own purpose (install on empty HDD ?)
 - A "NAS config" partition is 1.2MB large despite containing few configuration files (<128KB). This partition can be resized to 256KB (Flash block size) without losing the information.
+
+
 
 ## New Layout
 
@@ -123,6 +129,8 @@ Please, read [Recovery.md](Recovery.md).
 - What you need to know
 - Possible issues and workaroud
 
+
+
 # List of tested devices:
 
 |Model| cat /sys/firmware/devicetree/base/model | DTB file                | uboot env<br>(legacy)                                        | uboot_env<br>(new)                                           | Resize log                                 |      |
@@ -137,6 +145,14 @@ Please, read [Recovery.md](Recovery.md).
 | TS-419P | QNAP TS419 family | kirkwood-ts419-6281.dtb | [QNAP_TS419P,uboot-env.legacy](resources/QNAP_TS419P,uboot-env.legacy) | [QNAP_TS419P,uboot-env.new](resources/QNAP_TS419P,uboot-env.new) | [log](resources/QNAP_TS419P_log.txt) | |
 | TS-419PII | QNAP TS419 family | kirkwood-ts419-6282.dtb | [QNAP_TS419_family,uboot-env.legacy](resources/QNAP_TS419_family,uboot-env.legacy) | [QNAP_TS419_family,uboot-env.new](resources/QNAP_TS419_family,uboot-env.new) | [log](resources/QNAP_TS419_family_log.txt) | |
 | | | | | | | |
+
+## Bookworm support
+
+There is no change in Bookworm kernels making them incompatible with the partitionning. Bookworm upgrade from Bullseye should be ok on every device of the previous list.
+
+Success were reported for TS-119P+, TS-212P, TS-212E, TS-219PII, TS-410.
+
+Follow https://wiki.debian.org/DebianUpgrade to upgrade. Be sure you have enough room on your HDD (let's say ~2GB) before starting the upgrade since it was the cause of all reported issues.
 
 # Devices <u>not</u> supported
 
