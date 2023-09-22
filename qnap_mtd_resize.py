@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0  
 
     Copyright 2021 Arnaud Mouiche
-    
+    GPV Mods for SABOTEUR layout (see  https://forum.qnap.com/viewtopic.php?t=167230)
     
         
     This tool resize the MTD partitions of supported QNAP device
@@ -25,11 +25,24 @@
     
                            offset     size
         uboot          0x00000000 0x00080000  512KiB  /dev/mtd0
-        U-Boot Config  0x00080000 0x00040000  256KiB  /dev/mtd4
+        U-Boot Config  0x00080000 0x00040000  256KiB  /dev/mtd4  ... Holds U-Boot variables
         NAS Config     0x000c0000 0x00140000  1280KiB /dev/mtd5
-        Kernel         0x00200000 0x00200000  2MiB    /dev/mtd1
-        RootFS1        0x00400000 0x00900000  9MiB    /dev/mtd2
-        RootFS2        0x00d00000 0x00300000  3MiB    /dev/mtd3
+        Kernel         0x00200000 0x00200000  2MiB    /dev/mtd1  ... Holds Kernel
+        RootFS1        0x00400000 0x00900000  9MiB    /dev/mtd2  ... Holds /boot/initrd.img
+        RootFS2        0x00d00000 0x00300000  3MiB    /dev/mtd3  (unlused)
+
+
+
+    ... and the SABOTEUR MTD partition is:
+    
+                           offset     size
+        uboot          0x00000000 0x00080000  512KiB  /dev/mtd0
+        U-Boot Config  0x00080000 0x00040000  256KiB  /dev/mtd4  ... Holds U-Boot variables
+        NAS Config     0x000c0000 0x00140000  1280KiB /dev/mtd5
+        Kernel         0x00200000 0x00200000  2MiB    /dev/mtd1  (unused)
+        RootFS1        0x00400000 0x00900000  9MiB    /dev/mtd2  ... Holds /boot/initrd.img
+        RootFS2        0x00d00000 0x00300000  3MiB    /dev/mtd3  ... Holds Kernel
+
     
     The new mapping will be:
     
@@ -37,8 +50,8 @@
         uboot          0x00000000 0x00080000  512KiB  /dev/mtd0
         U-Boot_Config  0x00080000 0x00040000  256KiB  /dev/mtd4
         NAS_Config     0x000c0000 0x00040000  256KiB  /dev/mtd5
-        Kernel         0x00100000 0x00300000  3MiB    /dev/mtd1
-        RootFS1        0x00400000 0x00c00000  12MiB   /dev/mtd2
+        Kernel         0x00100000 0x00300000  3MiB    /dev/mtd1  ... Holds Kernel
+        RootFS1        0x00400000 0x00c00000  12MiB   /dev/mtd2  ... Holds /boot/initrd.img
         Kernel_legacy  0x00200000 0x00200000  2MiB    /dev/mtd3  (legacy Kernel range, overlap with new Kernel)
 
 
@@ -82,6 +95,52 @@ TESTED_QNAP_DTB = [
     "kirkwood-ts419-6282.dtb",
     ]
 
+DB="/etc/flash-kernel/db"
+NEWDB="/etc/flash-kernel/newdb"
+
+
+
+#
+# This is what was in my file /etc/flash-kernel/db 
+#
+# ==> # To override fields include the Machine field and the fields you wish to                              
+# ==> # override.                                                                                            
+# ==> #                                                                                                      
+# ==> # e.g. to override Boot-Device on the Dreamplug to sdb rather than sda                                 
+# ==> #                                                                                                      
+# ==> #Machine: Globalscale Technologies Dreamplug                                                           
+# ==> #Boot-Device: /dev/sdb1                                                                                
+# ==> Machine: QNAP TS419 family                                                                             
+# ==> Mtd-Kernel: RootFS2                                                                                    
+# ==>   
+
+saboteur_db = ['Machine: QNAP', 'Mtd-Kernel:']
+
+def updatedb(db="/etc/flash-kernel/db", newdb="/etc/flash-kernel/newdb"):
+
+    with open(db, 'r', encoding="utf-8") as F:
+        with open(newdb, 'w+', encoding="utf-8") as new_F:
+            while (line:=F.readline()):
+                # print ("line is" , line)
+
+                if any(s in line for s in saboteur_db):
+                    print ("removing" , line.rstrip())
+                else:
+                    new_F.write(line)
+                
+
+def testdb(db="/etc/flash-kernel/db"):
+
+    removed=0
+    
+    with open(db, 'r', encoding="utf-8") as F:
+        while (line:=F.readline()):
+            # print ("line is" , line)
+            
+            if any(s in line for s in saboteur_db):
+                removed+=1
+                
+    return removed
 
 def mtd_lookup(*names):
     """
@@ -136,6 +195,9 @@ parser = argparse.ArgumentParser(
         description='Tool to resize QNAP mtd partitions in order to increase the kernel and rootfs size'
         )
 
+
+parser.add_argument("--saboteur", action="store_true", help="Existing system uses SABOTEUR layout")
+
 parser.add_argument("--dry-run", action="store_true", help="Don't modify the flash content")
 parser.add_argument("--skip-bootargs", action="store_true", help="[WARNING] Don't patch bootargs. --setenv-script also required")
 parser.add_argument("--skip-bootcmd", action="store_true", help="[WARNING] Don't patch bootcmd. --setenv-script also required")
@@ -188,25 +250,54 @@ if dtb_file not in TESTED_QNAP_DTB:
 
 
     
+print ("The MTD partitions are as follows")
+with open('/proc/mtd', 'r', encoding="utf-8") as F:
+    print(F.read())
+
 # check if the MTD kernel and rootfs1 are not already resized
 mtd_kernel, size, _ = mtd_lookup("Kernel")
+
+print("Kernel is ", mtd_kernel, "Size is " , size, "(", size/(1024*1024),  ") Mb" )
+
 if size != 0x200000:
     print("Kernel has already been resized. Can't process further safely.")
     exit(1)
     
 mtd_rootfs1, size, _ = mtd_lookup("RootFS1")
+
+print("ROOTFS1 is ", mtd_rootfs1, "Size is " , size, "(", size/(1024*1024),  ") Mb" )
+
 if size != 0x900000:
     print("RootFS1 has already been resized. Can't process further safely.")
     exit(1)
  
+mtd_rootfs2, size, _ = mtd_lookup("RootFS2")
+
+print("ROOTFS2 is ", mtd_rootfs2, "Size is " , size, "(", size/(1024*1024),  ") Mb" )
+
+
+
  
 mtd_nas_config, size, _ = mtd_lookup("NAS Config", "NAS_Config")
+print("NAS_CONFIG is ", mtd_nas_config, "Size is " , size, "(", size/(1024),  ") Kb" )
 if size != 0x00140000:
     print("'NAS config' has already been resized. Can't process further safely.")
     exit(1)
     
 mtd_uboot_config, _, _ = mtd_lookup("U-Boot Config", "U-Boot_Config")
 
+print("UBOOT_CONFIG is ", mtd_uboot_config)
+
+#
+# As a sanity check, the user must have modified /etc/flash-kernel/db in order in order for flash_kernel to work
+#
+if args.saboteur:
+    print("Note: Will assume the existing system is setup to use the SABOTEUR layout (not original layout)")
+    print("This mainly means your existing kernel is found in ROOTFS2 and not in Kernel ")
+
+    if ( testdb(DB) != 2):
+        print("The file", DB, " does not appear to contain the lines requird by SABOTEUR", saboteur_db)
+        exit(1)
 
 
 # add /sbin and /usr/sbin in the PATH to be sure tools like flashcp can be found
@@ -310,20 +401,28 @@ if args.skip_bootcmd:
 else:
     print("\n[Prepare new 'bootcmd']")
     try:
-        if bootcmd.find("cp.l") >= 0:
-            # most common configuration
-            bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
+        if args.saboteur:
+            # SABOTEUR only ever defined for copy long
+            bootcmd_new = str_replace("cp.l 0xf8d00000 0x800000 0xc0000",
                                       "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
-            bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000",
+            bootcmd_new = str_replace("cp.l 0xf8400000 0xb00000 0x240000",
                                       "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
-        elif bootcmd.find("cp.b") >= 0:
-            # some old configurations are using cp.b
-            bootcmd_new = str_replace("cp.b 0xf8200000 0x800000 0x200000",
-                                      "cp.b 0xf8100000 0x800000 0x300000", bootcmd)
-            bootcmd_new = str_replace("cp.b 0xf8400000 0xa00000 0x900000",
-                                      "cp.b 0xf8400000 0xb00000 0xc00000", bootcmd_new)
         else:
-            raise KeyError("bootcmd not using 'cp.l' nor 'cp.b'")
+        
+            if bootcmd.find("cp.l") >= 0:
+                # most common configuration
+                bootcmd_new = str_replace("cp.l 0xf8200000 0x800000 0x0*80000",
+                                          "cp.l 0xf8100000 0x800000 0xc0000", bootcmd)
+                bootcmd_new = str_replace("cp.l 0xf8400000 0xa00000 0x240000",
+                                          "cp.l 0xf8400000 0xb00000 0x300000", bootcmd_new)
+            elif bootcmd.find("cp.b") >= 0:
+                # some old configurations are using cp.b
+                bootcmd_new = str_replace("cp.b 0xf8200000 0x800000 0x200000",
+                                          "cp.b 0xf8100000 0x800000 0x300000", bootcmd)
+                bootcmd_new = str_replace("cp.b 0xf8400000 0xa00000 0x900000",
+                                          "cp.b 0xf8400000 0xb00000 0xc00000", bootcmd_new)
+            else:
+                raise KeyError("bootcmd not using 'cp.l' nor 'cp.b'")
                                   
         # in case of QNAP TFTPBOOT recovery (ie. pressing reset button during boot + running live-cd-20130730.iso from VM)
         # uboot will:
@@ -332,7 +431,14 @@ else:
         # - DOESN'T restore the original uboot env
         # If we want to be able to boot after a QNAP TFTPBOOT recovery, our "bootcmd" must be able to fallback
         # to a kernel at flash 0x200000 (which is loaded in memory at 0x900000 when we load ou 3MB kernel from flash 0x100000)
+
+        # By the same logic, the SABOTEUR layout would have the kernel originaly at 0xd00000 (so 0xf8d0 0000)
+        # so this would get copied to RAM at 0xE00000 , so we would need a fallback bootm to 0xE00000
+        #
+
+        
         bootcmd_new += ";echo Kernel_legacy layout fallback;bootm 0x900000"
+#        bootcmd_new += ";echo Kernel_SABOTEUR layout fallback;bootm 0xE00000"
     except KeyError as e:
         print(str(e))
         print("Don't know how to patch 'bootcmd' for this model. Please report this log.")
@@ -350,8 +456,13 @@ if args.skip_bootargs:
 else:
     print("\n[Prepare new 'bootargs']")
     try:
-        bootargs_new = str_replace("initrd=0xa00000,0x900000", 
-                                  "initrd=0xb00000,0xc00000", bootargs)
+        if args.saboteur:
+            bootargs_new = str_replace("initrd=0xb00000,0x900000", 
+                                       "initrd=0xb00000,0xc00000", bootargs)
+
+        else:
+            bootargs_new = str_replace("initrd=0xa00000,0x900000", 
+                                       "initrd=0xb00000,0xc00000", bootargs)
                                   
         # setup cmdlinepart.mtdparts=... to set the partitions for cases where 'cmdlinepart' is build as external module 
         # (which is the current Debian behavior)
@@ -447,20 +558,65 @@ subprocess.check_call(cmd, shell=True)
 
 
 ###################################################################
-print("\n[Concatenate first 256K of 'NAS config' with first 1MB of Kernel > /tmp/mtd_nas_config.new]")
-with open("/tmp/mtd_nas_config.new", "wb") as new_F:
-    with open("/tmp/mtd_nas_config.dump", "rb") as F:
-        new_F.write(F.read(256*1024))
-    with open(f"/dev/{mtd_kernel}", "rb") as F:
-        new_F.write(F.read(1024*1024))
+#
+# With the ORIGINAL layout:
+#
+#  NAS config   1280K   @ mtd_nas_config
+#  Kernel is      2MB   @ mtd_kernel
+#  Initrd is      9MB   @ RootFS1
+#
+# With the SABOTEUR layout:
+#
+#  NAS config   1280K   @ mtd_nas_config
+#  Kernel is      3MB   @ RootFS2  *** DIFF *** (note bigger)
+#  Initrd is      9MB   @ RootFS1
+#
+
+if args.saboteur:
+    print("Note: From this point on the Kernel will be assumed to currently be in ROOTFS2")
+
+
+    print("\n[Concatenate first 256K of 'NAS config' with first 1MB of Kernel > /tmp/mtd_nas_config.new]")
+    with open("/tmp/mtd_nas_config.new", "wb") as new_F:
+        with open("/tmp/mtd_nas_config.dump", "rb") as F:
+            new_F.write(F.read(256*1024))
+            with open(f"/dev/{mtd_rootfs2}", "rb") as F:
+                new_F.write(F.read(1024*1024))
     
 
-print("\n[Prepare second 1MB of kernel tail > /tmp/mtd_kernel.tail]")
-with open("/tmp/mtd_kernel.tail", "wb") as new_F:
-    with open(f"/dev/{mtd_kernel}", "rb") as F:
-        F.seek(1024*1024)
-        new_F.write(F.read(1024*1024))
+    print("\n[Prepare subsequent 2MBs of kernel tail > /tmp/mtd_kernel.tail]")
+    with open("/tmp/mtd_kernel.tail", "wb") as new_F:
+        with open(f"/dev/{mtd_rootfs2}", "rb") as F:
+            F.seek(1024*1024)
+            new_F.write(F.read(2*1024*1024))
+else:
 
+    print("\n[Concatenate first 256K of 'NAS config' with first 1MB of Kernel > /tmp/mtd_nas_config.new]")
+    with open("/tmp/mtd_nas_config.new", "wb") as new_F:
+        with open("/tmp/mtd_nas_config.dump", "rb") as F:
+            new_F.write(F.read(256*1024))
+            with open(f"/dev/{mtd_kernel}", "rb") as F:
+                new_F.write(F.read(1024*1024))
+    
+
+    print("\n[Prepare second 1MB of kernel tail > /tmp/mtd_kernel.tail]")
+    with open("/tmp/mtd_kernel.tail", "wb") as new_F:
+        with open(f"/dev/{mtd_kernel}", "rb") as F:
+            F.seek(1024*1024)
+            new_F.write(F.read(1024*1024))
+
+
+print("\nThe temporary files have been created, note their size (SABOTEUR has a 3Mb Kernel)")
+
+subprocess.check_call("ls -l /tmp/mtd*", shell=True)
+
+
+print("Note: mtd_nas_config.dump was the original Nas Config (mtd5), note it's size\n",
+      "      mtd_nas_config.new is to replace nas_config (old.mtd5) note it's size\n",
+      "      mtd_nas_config.new contains 256kb of config + 1MB of Kernel (262144+1048576 = 1310720)\n",
+      "      mtd_kernel.tail contains the final 1 or 2MB of Kernel (1MB[1048576] for Original, 2MB[1048576] for SABOTEUR)\n",
+      "      mtd_kernel.tail will get written into old.nas_config (mtd5) + 1MB\n",
+      )
 
 
 print("-"*60)
@@ -541,6 +697,30 @@ if not args.dry_run:
     if not os.path.exists("/etc/fw_env.config"):
         shutil.copy("/tmp/fw_env.config", "/etc/fw_env.config")
 
+###################################################################        
+if args.saboteur:
+
+    print("\n[Update ", DB, "]")
+    # The file /etc/flash-kernel/db, is modified in SABOTEUR
+    # Create the new DB in anycase
+    updatedb(DB, NEWDB)
+
+    print("\n", DB, " is currently\n")
+    with open(DB, 'r', encoding="utf-8") as F:
+        print(F.read())
+
+
+    print("\n It will be changed to\n")
+    with open(NEWDB, 'r', encoding="utf-8") as F:
+        print(F.read())
+
+
+    if args.dry_run:
+        print("\nDryrun ", DB, " will be left unchanged")
+    else:
+        # Copy it back so it becomes the LIVE version
+        print("\nWill copy ", NEWDB, " back into ", DB)
+        shutil.copy(NEWDB, DB)
 
 
 ###################################################################
