@@ -65,9 +65,15 @@
         New U-boot env
            bootcmd=uart1 0x68;cp.l 0xf8100000 0x800000 0xc0000;cp.l 0xf8400000 0xb00000 0x300000;bootm 0x800000;\
                     echo Kernel_legacy layout fallback;bootm 0x900000
-           
-           boorargs=console=ttyS0,115200 root=/dev/ram initrd=0xb00000,0xc00000 ramdisk=32768 \ 
+
+
+        **NB Due to a kernel bug, the arg mtdparts is specified TWICE, once as mtdparts= (correct) and once as cmdlinepart.mtdparts= (bug)
+
+           bootargs=console=ttyS0,115200 root=/dev/ram initrd=0xb00000,0xc00000 ramdisk=32768 \ 
                     cmdlinepart.mtdparts=spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),\
+                    12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot_Config),\
+                    256k@0xc0000(NAS_Config) \
+                    mtdparts=spi0.0:512k@0(uboot)ro,3M@0x100000(Kernel),\
                     12M@0x400000(RootFS1),2M@0x200000(Kernel_legacy),256k@0x80000(U-Boot_Config),\
                     256k@0xc0000(NAS_Config)
     
