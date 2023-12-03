@@ -141,6 +141,7 @@ Please, read [Recovery.md](Recovery.md).
 | TS-212P | QNAP TS219 family                       | kirkwood-ts219-6282.dtb |                                                              |                                                              | [log](resources/QNAP_TS212P_log.txt) |      |
 | TS-219P | QNAP TS219 family                       | kirkwood-ts219-6281.dtb |                                                              |                                                              |                                            |      |
 | TS-219PII | QNAP TS219 family | kirkwood-ts219-6282.dtb | [QNAP_TS219_family,uboot-env.legacy](resources/QNAP_TS219_family,uboot-env.legacy) | [QNAP_TS219_family,uboot-env.new](resources/QNAP_TS219_family,uboot-env.new) | | |
+| TS-220 | QNAP TS219 family | kirkwood-ts219-6282.dtb | | | [log](resources/QNAP_TS220_log.txt) | |
 | TS-410 | QNAP TS410 family | | | | | |
 | TS-419P | QNAP TS419 family | kirkwood-ts419-6281.dtb | [QNAP_TS419P,uboot-env.legacy](resources/QNAP_TS419P,uboot-env.legacy) | [QNAP_TS419P,uboot-env.new](resources/QNAP_TS419P,uboot-env.new) | [log](resources/QNAP_TS419P_log.txt) | |
 | TS-419PII | QNAP TS419 family | kirkwood-ts419-6282.dtb | [QNAP_TS419_family,uboot-env.legacy](resources/QNAP_TS419_family,uboot-env.legacy) | [QNAP_TS419_family,uboot-env.new](resources/QNAP_TS419_family,uboot-env.new) | [log](resources/QNAP_TS419_family_log.txt) | |
@@ -150,7 +151,7 @@ Please, read [Recovery.md](Recovery.md).
 
 There is no change in Bookworm kernels making them incompatible with the partitionning. Bookworm upgrade from Bullseye should be ok on every device of the previous list.
 
-Success were reported for TS-119P+, TS-212P, TS-212E, TS-219PII, TS-410.
+Success were reported for TS-119P+, TS-212P, TS-212E, TS-219PII, TS-220, TS-410.
 
 Follow https://wiki.debian.org/DebianUpgrade to upgrade. Be sure you have enough room on your HDD (let's say ~2GB) before starting the upgrade since it was the cause of all reported issues.
 
