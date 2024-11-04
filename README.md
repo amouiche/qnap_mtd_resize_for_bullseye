@@ -110,7 +110,29 @@ Flashing kernel (using 2455558/3145728 bytes)... done.
 Flashing initramfs (using 3992060/12582912 bytes)... done.
 ```
 
+## Troubleshooting
 
+### "NAS config" resize issue
+
+The resize of "NAS config" partition may fail if the current content can't be repaired. In this case you will see the message.
+
+```
+e2fsck failed. 'NAS config' resize not possible automatically
+```
+
+You can decide to skip the `e2fsck` + `resize2fs` process. The content of "NAS config" will be lost, but it is not used by Debian anyway, and you still have the old MTD partition backup done in case of recovery...
+
+Run  qnap_mtd_resize.py again with additional --drop-nas-config option:
+
+```
+sudo ./qnap_mtd_resize.py --drop-nas-config --dry-run
+```
+
+Then, if everything is fine:
+
+```
+sudo ./qnap_mtd_resize.py --drop-nas-config
+```
 
 ## Additional configuration to improve `initrd` size
 

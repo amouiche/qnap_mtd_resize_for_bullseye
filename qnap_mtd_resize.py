@@ -143,6 +143,10 @@ parser.add_argument("--setenv-script-append", metavar="FILE", help="""
     Additional setenv script to append in addition to the bootargs and bootcmd patching.
     (see man fw_setenv)")
     """)
+parser.add_argument("--drop-nas-config", action="store_true", help="""
+    Don't try to resize 'NAS config' partition and drop its content.
+    (Useful if e2fsck keeps failing and the partition is not recoverable)")
+    """)
 
 args = parser.parse_args()
 
@@ -418,9 +422,12 @@ subprocess.check_call(cmd, shell=True)
 
     
 ###################################################################
-print("[Resize 'NAS config' dump from 1280KB to 256KB.]")
+if args.drop_nas_config:
+    print("[--drop-nas-config => don't try to resize 'NAS config']")
+else:
+    print("[Resize 'NAS config' dump from 1280KB to 256KB.]")
 
-cmd = f"""
+    cmd = f"""
     set -e
     set -x
     modprobe loop
@@ -442,8 +449,8 @@ cmd = f"""
     fi
     losetup -d $loopdev
     """
-    
-subprocess.check_call(cmd, shell=True)
+        
+    subprocess.check_call(cmd, shell=True)
 
 
 ###################################################################
